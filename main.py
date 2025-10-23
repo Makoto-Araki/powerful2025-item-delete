@@ -1,7 +1,7 @@
 import os
 import csv
+import glob
 import requests
-from dotenv import load_dotenv
 
 # --- トークン読み込み ---
 load_dotenv()
@@ -11,52 +11,53 @@ ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 SHOPIFY_STORE = "powerful2025.myshopify.com"
 API_VERSION = "2025-10"
 
-def register_product(title, price, inventory, image_url=None):
-    url = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/products.json"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": ACCESS_TOKEN
-    }
-    
-    product_payload = {
-        "product": {
-            "title": title,
-            "variants": [
-                {
-                    "price": price,
-                    "inventory_management": "shopify",
-                    "inventory_quantity": inventory
-                }
-            ]
-        }
-    }
-    
-    # 画像URLがある場合は images フィールドを追加
-    if image_url:
-        product_payload["product"]["images"] = [{"src": image_url}]
-    
-    response = requests.post(url, json=product_payload, headers=headers)
-    
-    if response.status_code == 201:
-        print(f"登録成功: {title}")
-    else:
-        print(f"登録失敗: {title} / {response.status_code} / {response.text}")
+# ===== ベースURLと共通ヘッダー =====
+BASE_URL = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}"
+HEADERS = {
+    "Content-Type": "application/json",
+    "X-Shopify-Access-Token": os.getenv('ACCESS_TOKEN')
+}
 
+# ===== 商品削除関数 =====
+def delete_product_by_id(product_id: str):
+    """商品IDを指定して削除"""
+    url = f"{BASE_URL}/products/{product_id}.json"
+    response = requests.delete(url, headers=HEADERS)
+    if response.status_code == 200:
+        print(f"✅ 商品ID {product_id} を削除しました。")
+    elif response.status_code == 404:
+        print(f"⚠️ 商品ID {product_id} が見つかりません。")
+    else:
+        print(f"❌ 商品ID {product_id} の削除に失敗: {response.status_code} - {response.text}")
+
+# ===== メイン処理 =====
 def main():
     input_folder = os.path.join(os.path.dirname(__file__), "input")
-    
-    # inputフォルダ内のすべてのCSVを処理
-    for file_name in os.listdir(input_folder):
-        if file_name.endswith(".csv"):
-            csv_path = os.path.join(input_folder, file_name)
-            with open(csv_path, encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    title = row["title"]
-                    price = row["price"]
-                    inventory = int(row["inventory"])
-                    image_url = row.get("image", None)  # 画像URL列がない場合はNone
-                    register_product(title, price, inventory, image_url)
+    csv_files = os.listdir(input_folder)
+
+    if not csv_files:
+        print("⚠️ inputフォルダ内にCSVファイルが見つかりません。")
+        return
+
+    for csv_file in csv_files:
+        print(f"\n📄 処理中: {csv_file}")
+        with open(csv_file, newline='', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                product_id = row.get("id")
+                handle = row.get("handle")
+
+                if product_id:
+                    delete_product_by_id(product_id.strip())
+                elif handle:
+                    pid = get_product_id_by_handle(handle.strip())
+                    if pid:
+                        delete_product_by_id(pid)
+                    else:
+                        print(f"⚠️ ハンドル {handle} に対応する商品が見つかりません。")
+                else:
+                    print(f"⚠️ CSV行にidまたはhandleがありません: {row}")
+
 
 if __name__ == "__main__":
     main()
