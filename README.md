@@ -1,4 +1,4 @@
-# powerful2025-item-insert (商品登録)
+# powerful2025-item-delete (商品削除)
 
 ## 前提条件
 - Shopifyに開発ストアpowerful2025が存在
@@ -6,24 +6,7 @@
 - リモートリポジトリ作成済
 
 ## 処理概要
-- inputフォルダ内の入力CSVファイルの商品情報を読み取り、開発ストアpowerful2025に登録
-
-## 商品画像を管理画面に登録
-### Shopify管理画面
-#### 手順01
-![管理画面操作01](images/content_upload_01.png)
-#### 手順02
-![管理画面操作02](images/content_upload_02.png)
-#### 手順03
-![管理画面操作03](images/content_upload_03.png)
-#### 手順04
-![管理画面操作04](images/content_upload_04.png)
-#### 手順05
-![管理画面操作05](images/content_upload_05.png)
-#### 手順06
-![管理画面操作06](images/content_upload_06.png)
-#### 手順07
-- クリックボードに画像URLがコピー
+- inputフォルダ内の入力CSVファイルの商品情報を読み取り、開発ストアpowerful2025から削除
 
 ## 入力CSVファイルのサンプル
 ![入力CSVファイルサンプル01](images/input_csv_01.png)
@@ -37,8 +20,8 @@ $ sudo apt upgrade
 $ sudo apt install python3-venv -y
 
 ## ディレクトリ移動
-$ mkdir ~/powerful2025-item-register
-$ cd powerful2025-item-register
+$ mkdir ~/powerful2025-item-delete
+$ cd powerful2025-item-delete
 
 ## ローカルリポジトリ初期化
 $ git init
@@ -47,7 +30,7 @@ $ git config --global user.name Makoto-Araki
 
 ## リモートリポジトリ設定
 $ git branch -M main
-$ git remote add origin git@github.com:Makoto-Araki/powerful2025-item-register.git
+$ git remote add origin git@github.com:Makoto-Araki/powerful2025-item-delete.git
 ```
 
 ### 開発準備
@@ -65,6 +48,7 @@ $ echo 'ACCESS_TOKEN=(APIトークン)' >> .env
 $ echo '.env' >> .gitignore
 $ echo 'venv/' >> .gitignore
 $ echo 'input/' >> .gitignore
+$ echo 'output/' >> .gitignore
 
 ## Python仮想環境終了
 $ deactivate
@@ -75,8 +59,9 @@ $ deactivate
 ## Python仮想環境起動
 $ source venv/bin/activate
 
-## 入力CSVファイル用のディレクトリ作成
+## ディレクトリ作成
 $ mkdir input
+$ mkdir output
 
 ## 入力CSVファイル作成
 $ vi input_csv_01.csv
