@@ -8,8 +8,8 @@
 ## 処理概要
 - inputフォルダ内の入力CSVファイルの商品情報を読み取り、開発ストアpowerful2025から削除
 
-## 入力CSVファイルのサンプル
-![入力CSVファイルサンプル01](images/input_csv_01.png)
+## 入力ファイルのサンプル ※商品一覧のプログラムで出力した商品一覧を編集
+![入力ファイルサンプル01](images/product_csv_01.png)
 
 ## 環境構築
 ### ローカルリポジトリ作成
@@ -63,7 +63,7 @@ $ source venv/bin/activate
 $ mkdir input
 $ mkdir output
 
-## 入力CSVファイル作成
+## 入力ファイル作成
 $ vi input_csv_01.csv
 
 ## Pythonプログラム記述

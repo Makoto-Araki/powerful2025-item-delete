@@ -1,13 +1,14 @@
 import os
 import csv
-import glob
+import re
 import requests
+from dotenv import load_dotenv
 
-# --- トークン読み込み ---
+# ===== トークン読み込み =====
 load_dotenv()
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 
-# --- Shopify設定 ---
+# ===== Shopify設定 =====
 SHOPIFY_STORE = "powerful2025.myshopify.com"
 API_VERSION = "2025-10"
 
@@ -15,20 +16,28 @@ API_VERSION = "2025-10"
 BASE_URL = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}"
 HEADERS = {
     "Content-Type": "application/json",
-    "X-Shopify-Access-Token": os.getenv('ACCESS_TOKEN')
+    "X-Shopify-Access-Token": ACCESS_TOKEN
 }
 
 # ===== 商品削除関数 =====
 def delete_product_by_id(product_id: str):
-    """商品IDを指定して削除"""
-    url = f"{BASE_URL}/products/{product_id}.json"
+    """商品IDを指定して削除（GraphQL形式にも対応）"""
+    # gid://shopify/Product/1234567890 → 1234567890 に変換
+    match = re.search(r'(\d+)$', product_id)
+    if not match:
+        print(f"⚠️ product_id の形式が不正です: {product_id}")
+        return
+
+    numeric_id = match.group(1)
+    url = f"{BASE_URL}/products/{numeric_id}.json"
+
     response = requests.delete(url, headers=HEADERS)
     if response.status_code == 200:
-        print(f"✅ 商品ID {product_id} を削除しました。")
+        print(f"✅ 商品ID {numeric_id} を削除しました。")
     elif response.status_code == 404:
-        print(f"⚠️ 商品ID {product_id} が見つかりません。")
+        print(f"⚠️ 商品ID {numeric_id} が見つかりません。")
     else:
-        print(f"❌ 商品ID {product_id} の削除に失敗: {response.status_code} - {response.text}")
+        print(f"❌ 商品ID {numeric_id} の削除に失敗: {response.status_code} - {response.text}")
 
 # ===== メイン処理 =====
 def main():
@@ -41,22 +50,15 @@ def main():
 
     for csv_file in csv_files:
         print(f"\n📄 処理中: {csv_file}")
-        with open(csv_file, newline='', encoding='utf-8-sig') as f:
+        with open(f'{input_folder}/{csv_file}', newline='', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                product_id = row.get("id")
-                handle = row.get("handle")
+                product_id = row.get("product_id")
 
                 if product_id:
                     delete_product_by_id(product_id.strip())
-                elif handle:
-                    pid = get_product_id_by_handle(handle.strip())
-                    if pid:
-                        delete_product_by_id(pid)
-                    else:
-                        print(f"⚠️ ハンドル {handle} に対応する商品が見つかりません。")
                 else:
-                    print(f"⚠️ CSV行にidまたはhandleがありません: {row}")
+                    print(f"⚠️ CSV行にproduct_idがありません: {row}")
 
 
 if __name__ == "__main__":
