@@ -1,6 +1,5 @@
 import os
 import csv
-import re
 import requests
 from dotenv import load_dotenv
 
@@ -12,32 +11,56 @@ ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 SHOPIFY_STORE = "powerful2025.myshopify.com"
 API_VERSION = "2025-10"
 
-# ===== ベースURLと共通ヘッダー =====
-BASE_URL = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}"
+# ===== GraphQLエンドポイントと共通ヘッダー =====
+GRAPHQL_URL = f"https://{SHOPIFY_STORE}/admin/api/{API_VERSION}/graphql.json"
 HEADERS = {
     "Content-Type": "application/json",
     "X-Shopify-Access-Token": ACCESS_TOKEN
 }
 
-# ===== 商品削除関数 =====
-def delete_product_by_id(product_id: str):
-    """商品IDを指定して削除（GraphQL形式にも対応）"""
-    # gid://shopify/Product/1234567890 → 1234567890 に変換
-    match = re.search(r'(\d+)$', product_id)
-    if not match:
-        print(f"⚠️ product_id の形式が不正です: {product_id}")
+# ===== GraphQL 商品削除関数 =====
+def delete_product_by_gid(product_gid: str):
+    """GraphQL形式のGIDを使って商品削除"""
+    query = """
+    mutation productDelete($input: ProductDeleteInput!) {
+      productDelete(input: $input) {
+        deletedProductId
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+
+    variables = {
+        "input": {
+            "id": product_gid
+        }
+    }
+
+    response = requests.post(
+        GRAPHQL_URL,
+        headers=HEADERS,
+        json={"query": query, "variables": variables}
+    )
+
+    if response.status_code != 200:
+        print(f"❌ APIリクエスト失敗: {response.status_code} - {response.text}")
         return
 
-    numeric_id = match.group(1)
-    url = f"{BASE_URL}/products/{numeric_id}.json"
+    data = response.json()
 
-    response = requests.delete(url, headers=HEADERS)
-    if response.status_code == 200:
-        print(f"✅ 商品ID {numeric_id} を削除しました。")
-    elif response.status_code == 404:
-        print(f"⚠️ 商品ID {numeric_id} が見つかりません。")
+    errors = data.get("data", {}).get("productDelete", {}).get("userErrors", [])
+    deleted_id = data.get("data", {}).get("productDelete", {}).get("deletedProductId")
+
+    if deleted_id:
+        print(f"✅ 商品削除成功: {deleted_id}")
+    elif errors:
+        for e in errors:
+            print(f"⚠️ 削除エラー: {e['message']}")
     else:
-        print(f"❌ 商品ID {numeric_id} の削除に失敗: {response.status_code} - {response.text}")
+        print(f"❌ 不明なエラー: {data}")
 
 # ===== メイン処理 =====
 def main():
@@ -50,16 +73,14 @@ def main():
 
     for csv_file in csv_files:
         print(f"\n📄 処理中: {csv_file}")
-        with open(f'{input_folder}/{csv_file}', newline='', encoding='utf-8-sig') as f:
+        with open(os.path.join(input_folder, csv_file), newline='', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                product_id = row.get("product_id")
-
-                if product_id:
-                    delete_product_by_id(product_id.strip())
+                product_gid = row.get("product_id")
+                if product_gid:
+                    delete_product_by_gid(product_gid.strip())
                 else:
                     print(f"⚠️ CSV行にproduct_idがありません: {row}")
-
 
 if __name__ == "__main__":
     main()
